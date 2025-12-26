@@ -78,7 +78,7 @@ app.get('/setup-db', async (req, res) => {
 // Make User Admin Route
 app.get('/make-admin', async (req, res) => {
   const email = req.query.email;
-  if (!email) return res.status(400).send("Please provide an email parameter. Example: /make-admin?email=user@example.com");
+  if (!email) return res.status(400).send("Please provide an email parameter. Example: /make-admin?email=Akposace65@gmail.com");
 
   try {
     const result = await pool.query(
