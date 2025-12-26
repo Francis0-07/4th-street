@@ -216,9 +216,9 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Left Column: Image Gallery */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 md:grid md:grid-cols-2 md:pb-0 scrollbar-hide">
               {allImages.map((img, index) => (
-                <div key={index} className="bg-gray-100 rounded-lg overflow-hidden group relative aspect-[3/4]">
+                <div key={index} className="bg-gray-100 rounded-lg overflow-hidden group relative aspect-[3/4] min-w-[85vw] md:min-w-0 snap-center flex-shrink-0">
                   <img 
                     src={img} 
                     alt={`${product.name} view ${index + 1}`} 

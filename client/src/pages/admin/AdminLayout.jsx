@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, Users, LogOut, Tag, BarChart, Settings, ShieldCheck, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Users, LogOut, Tag, BarChart, Settings, ShieldCheck, RotateCcw, Menu, X } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const AdminLayout = ({ setAuth }) => {
   const location = useLocation();
   const [user, setUser] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -30,11 +31,25 @@ const AdminLayout = ({ setAuth }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold font-serif">4th-street Admin</h1>
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold font-serif">4th-street</h1>
+          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-white">
+            <X size={24} />
+          </button>
           {user?.is_super_admin && (
             <div className="mt-2 inline-block px-2 py-1 text-xs font-semibold bg-indigo-600 text-white rounded shadow-sm">
               Super Admin
@@ -102,8 +117,18 @@ const AdminLayout = ({ setAuth }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        <Outlet />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between flex-shrink-0">
+            <button onClick={() => setIsSidebarOpen(true)} className="text-gray-600 hover:text-gray-900">
+                <Menu size={24} />
+            </button>
+            <span className="font-bold text-gray-900">Admin Panel</span>
+            <div className="w-6"></div> {/* Spacer for centering */}
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
