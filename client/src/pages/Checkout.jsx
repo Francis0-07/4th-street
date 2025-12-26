@@ -1,18 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, CreditCard, Truck, Award } from 'lucide-react';
+import { CheckCircle, CreditCard, Truck, Award, Lock } from 'lucide-react';
 import { formatNaira } from '../utils/formatCurrency';
+import { JUMIA_STATIONS } from '../data/jumiaStations';
+import { usePaystackPayment } from 'react-paystack';
 
-const JUMIA_STATIONS = [
-    "Ikeja - 123 Allen Avenue",
-    "Lekki - 45 Admiralty Way",
-    "Yaba - 20 Commercial Road",
-    "Surulere - 15 Ojuelegba Road",
-    "Victoria Island - 10 Ozumba Mbadiwe",
-    "Abuja Central - 5 Garki Area",
-    "Port Harcourt - 8 Aba Road",
-    "Ibadan - 30 Trans Amadi"
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -38,11 +31,13 @@ const Checkout = () => {
     expiry: '',
     cvc: ''
   });
+  const [isPaying, setIsPaying] = useState(false);
+  const orderProcessed = useRef(false);
 
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const response = await fetch("http://localhost:5000/cart", {
+        const response = await fetch(`${API_URL}/cart`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();
@@ -62,7 +57,7 @@ const Checkout = () => {
 
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://localhost:5000/user", {
+        const response = await fetch(`${API_URL}/user`, {
           headers: { token: localStorage.token }
         });
         if (response.ok) {
@@ -77,8 +72,8 @@ const Checkout = () => {
       if (!localStorage.token) return;
       try {
         const [addrRes, ordersRes] = await Promise.all([
-            fetch("http://localhost:5000/addresses", { headers: { token: localStorage.token } }),
-            fetch("http://localhost:5000/orders", { headers: { token: localStorage.token } })
+            fetch(`${API_URL}/addresses`, { headers: { token: localStorage.token } }),
+            fetch(`${API_URL}/orders`, { headers: { token: localStorage.token } })
         ]);
 
         let combined = [];
@@ -158,6 +153,12 @@ const Checkout = () => {
 
   const nextStep = (e) => {
     e.preventDefault();
+    if (step === 1) {
+        if (!JUMIA_STATIONS.includes(shippingInfo.pickupStation)) {
+            alert("Please select a valid pickup station from the list.");
+            return;
+        }
+    }
     setStep(step + 1);
   };
 
@@ -167,7 +168,7 @@ const Checkout = () => {
 
   const applyPromo = async () => {
     try {
-      const response = await fetch('http://localhost:5000/cart/validate-promo', {
+      const response = await fetch(`${API_URL}/cart/validate-promo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -207,11 +208,54 @@ const Checkout = () => {
     setPointsRedeemed(pointsToUse);
   };
 
-  const handlePlaceOrder = async (e) => {
-    if (e) e.preventDefault();
+  // Paystack Configuration
+  const pointsValue = pointsRedeemed * 100;
+  const finalAmount = Math.max(0, total - discount - pointsValue);
+  
+  // Use state for reference to ensure it persists across renders but updates on retry
+  const [paystackReference, setPaystackReference] = useState((new Date()).getTime().toString());
+
+  const paystackConfig = useMemo(() => ({
+    reference: paystackReference,
+    email: user?.email || "customer@example.com",
+    amount: finalAmount * 100, // Paystack expects amount in Kobo (Naira * 100)
+    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_your_public_key_here',
+    metadata: {
+        user_id: user?.user_id,
+        shipping_address: shippingInfo,
+        points_redeemed: pointsRedeemed,
+        points_earned: Math.floor(finalAmount / 10000), // 1 point per 10k
+        custom_fields: [] // Can add cart summary here if needed for email receipt
+    }
+  }), [paystackReference, user, finalAmount, shippingInfo, pointsRedeemed]);
+
+  const initializePayment = usePaystackPayment(paystackConfig);
+
+  const onPaystackSuccess = (reference) => {
+      console.log("Paystack Success Data:", reference);
+      handlePlaceOrder(reference);
+  };
+
+  const onPaystackClose = () => {
+      alert("Payment cancelled");
+      setIsPaying(false);
+      setPaystackReference((new Date()).getTime().toString()); // Generate new ref for next attempt
+  };
+
+  const handlePlaceOrder = async (paymentData) => {
+    if (orderProcessed.current) return;
+
+    if (paymentData && paymentData.preventDefault) paymentData.preventDefault();
+    
     const pointsValue = pointsRedeemed * 100;
+    // Robustly extract reference: try paymentData, then fallback to state
+    const refFromData = paymentData?.reference || (typeof paymentData === 'string' ? paymentData : null);
+    const paymentReference = refFromData || paystackReference;
+
+    console.log("Attempting to place order with Ref:", paymentReference);
+
     try {
-      const response = await fetch("http://localhost:5000/orders", {
+      const response = await fetch(`${API_URL}/orders`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
@@ -220,23 +264,52 @@ const Checkout = () => {
         body: JSON.stringify({ 
             total_amount: Math.max(0, total - discount - pointsValue),
             shipping_address: shippingInfo,
-            points_redeemed: pointsRedeemed
+            points_redeemed: pointsRedeemed,
+            payment_reference: paymentReference
         })
       });
       
       const parseRes = await response.json();
       
       if (parseRes.order_id) {
+          console.log("Order Created Successfully:", parseRes.order_id);
+          orderProcessed.current = true;
           window.dispatchEvent(new Event("cartUpdated")); // Clear cart badge
           navigate(`/order-confirmation/${parseRes.order_id}`);
       } else {
-          alert("Failed to place order: " + JSON.stringify(parseRes));
+          console.error("Order Creation Failed:", parseRes);
+          alert("Failed to place order: " + (parseRes.message || JSON.stringify(parseRes)));
       }
     } catch (err) {
       console.error(err.message);
       alert("Error processing order");
     }
   };
+
+  // Polling Effect: Check if order was created via Webhook (Fallback for when callback fails)
+  useEffect(() => {
+    let interval;
+    if (isPaying && !orderProcessed.current) {
+      interval = setInterval(async () => {
+        if (orderProcessed.current) return;
+        try {
+          const response = await fetch(`http://localhost:5000/orders/ref/${paystackReference}`, {
+            headers: { token: localStorage.token }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.order_id && !orderProcessed.current) {
+              orderProcessed.current = true;
+              clearInterval(interval);
+              window.dispatchEvent(new Event("cartUpdated"));
+              navigate(`/order-confirmation/${data.order_id}`);
+            }
+          }
+        } catch (err) { /* Ignore polling errors to reduce console noise */ }
+      }, 5000); // Check every 5 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isPaying, paystackReference, navigate]);
 
   return (
     <div className="bg-gray-50 min-h-screen py-12">
@@ -293,12 +366,22 @@ const Checkout = () => {
                         </div>
                         <div className="sm:col-span-2">
                             <label htmlFor="pickupStation" className="block text-sm font-medium text-gray-700">Closest Jumia Pickup Station</label>
-                            <select name="pickupStation" id="pickupStation" required value={shippingInfo.pickupStation} onChange={handleShippingChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="">Select a station</option>
+                            <input 
+                                list="jumia-stations-checkout"
+                                type="text" 
+                                name="pickupStation" 
+                                id="pickupStation" 
+                                required 
+                                value={shippingInfo.pickupStation} 
+                                onChange={handleShippingChange} 
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                placeholder="Select or Search Station"
+                            />
+                            <datalist id="jumia-stations-checkout">
                                 {JUMIA_STATIONS.map((station) => (
-                                    <option key={station} value={station}>{station}</option>
+                                    <option key={station} value={station} />
                                 ))}
-                            </select>
+                            </datalist>
                         </div>
                     </div>
                     <div className="mt-6 flex justify-end">
@@ -393,31 +476,54 @@ const Checkout = () => {
             )}
 
             {step === 3 && (
-                <form onSubmit={handlePlaceOrder}>
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">Payment Details</h2>
-                    <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                        <div className="sm:col-span-6">
-                            <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700">Card Number</label>
-                            <input type="text" name="cardNumber" id="cardNumber" required value={paymentInfo.cardNumber} onChange={handlePaymentChange} placeholder="0000 0000 0000 0000" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                        <div className="sm:col-span-3">
-                            <label htmlFor="expiry" className="block text-sm font-medium text-gray-700">Expiration Date (MM/YY)</label>
-                            <input type="text" name="expiry" id="expiry" required value={paymentInfo.expiry} onChange={handlePaymentChange} placeholder="MM/YY" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                        </div>
-                        <div className="sm:col-span-3">
-                            <label htmlFor="cvc" className="block text-sm font-medium text-gray-700">CVC</label>
-                            <input type="text" name="cvc" id="cvc" required value={paymentInfo.cvc} onChange={handlePaymentChange} placeholder="123" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                <div>
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Complete Payment</h2>
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <CreditCard className="h-5 w-5 text-blue-400" aria-hidden="true" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-blue-800">Payment Required</h3>
+                                <div className="mt-2 text-sm text-blue-700">
+                                    <p>You are about to pay <strong>{formatNaira(finalAmount)}</strong> securely via Paystack.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Manual Verification Button (Backup for Localhost/Network issues) */}
+                    {isPaying && (
+                        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md animate-pulse">
+                            <p className="text-sm text-yellow-800 mb-2 font-medium">
+                                Payment completed but page didn't redirect?
+                            </p>
+                            <button 
+                                type="button"
+                                onClick={() => handlePlaceOrder({ reference: paystackReference })}
+                                className="text-sm font-bold text-indigo-600 hover:text-indigo-500 underline focus:outline-none"
+                            >
+                                Click here to confirm your payment
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mt-6 flex justify-between">
                         <button type="button" onClick={prevStep} className="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Back
                         </button>
-                        <button type="submit" className="bg-indigo-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Place Order
+                        <button 
+                            onClick={() => {
+                                setIsPaying(true);
+                                initializePayment(onPaystackSuccess, onPaystackClose);
+                            }}
+                            className="flex items-center bg-indigo-600 border border-transparent rounded-md shadow-sm py-3 px-8 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            <Lock className="w-4 h-4 mr-2" />
+                            Pay {formatNaira(finalAmount)}
                         </button>
                     </div>
-                </form>
+                </div>
             )}
         </div>
       </div>

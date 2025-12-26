@@ -12,12 +12,17 @@ import addressesRouter from './routes/addresses.js';
 import rolesRouter from './routes/roles.js';
 import settingsRouter from './routes/settings.js';
 import contactRouter from './routes/contact.js';
+import webhookRouter from './routes/webhook.js';
+import notificationsRouter from './routes/notifications.js';
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '200mb' }));
+app.use(express.json({ 
+  limit: '200mb',
+  verify: (req, res, buf) => { req.rawBody = buf } 
+}));
 app.use(express.urlencoded({ limit: '200mb', extended: true }));
 
 // Routes
@@ -32,6 +37,8 @@ app.use('/addresses', addressesRouter);
 app.use('/roles', rolesRouter);
 app.use('/settings', settingsRouter);
 app.use('/contact', contactRouter);
+app.use('/webhook', webhookRouter);
+app.use('/notifications', notificationsRouter);
 
 // Test Route
 app.get('/', (req, res) => {

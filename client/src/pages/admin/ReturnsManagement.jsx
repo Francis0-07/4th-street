@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, PackagePlus } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ReturnsManagement = () => {
   const [returns, setReturns] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchReturns = async () => {
     try {
-      const response = await fetch('http://localhost:5000/admin/returns', {
+      const response = await fetch(`${API_URL}/admin/returns`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -28,7 +30,7 @@ const ReturnsManagement = () => {
     if (!window.confirm(`Are you sure you want to mark this return as ${newStatus}?`)) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/admin/returns/${id}`, {
+      const response = await fetch(`${API_URL}/admin/returns/${id}`, {
         method: 'PUT',
         headers: { 
             'Content-Type': 'application/json',
@@ -51,7 +53,7 @@ const ReturnsManagement = () => {
     if (!window.confirm("Restock items from this return? Inventory counts will be increased.")) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/admin/returns/${id}/restock`, {
+      const response = await fetch(`${API_URL}/admin/returns/${id}/restock`, {
         method: 'POST',
         headers: { token: localStorage.token }
       });

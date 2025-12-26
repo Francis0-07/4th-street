@@ -58,7 +58,7 @@ CREATE TABLE products (
 CREATE TABLE cart_items (
     cart_item_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id),
-    product_id INTEGER REFERENCES products(product_id),
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
     size VARCHAR(50),
     quantity INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -97,6 +97,7 @@ CREATE TABLE orders (
     shipping_address JSONB, -- Stores address snapshot
     points_redeemed INTEGER DEFAULT 0,
     points_earned INTEGER DEFAULT 0,
+    payment_reference VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -113,7 +114,7 @@ CREATE TABLE order_items (
 -- 9. Reviews (Supports Product Detail Page reviews)
 CREATE TABLE reviews (
     review_id SERIAL PRIMARY KEY,
-    product_id INTEGER REFERENCES products(product_id),
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(user_id),
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
@@ -124,7 +125,7 @@ CREATE TABLE reviews (
 CREATE TABLE wishlist (
     wishlist_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id),
-    product_id INTEGER REFERENCES products(product_id),
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, product_id)
 );
@@ -153,4 +154,13 @@ CREATE TABLE returns (
     resolution VARCHAR(50), -- 'refund' or 'exchange'
     status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, completed
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 13. Product Notifications (Back in Stock Alerts)
+CREATE TABLE product_notifications (
+    notification_id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(email, product_id)
 );

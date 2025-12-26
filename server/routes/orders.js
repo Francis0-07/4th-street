@@ -1,6 +1,8 @@
 import express from 'express';
 import pool from '../db.js';
 import authorization from '../middleware/authorization.js';
+import verifyPayment from '../utils/paystack.js';
+import { sendEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -56,11 +58,57 @@ router.get('/:id', authorization, async (req, res) => {
   }
 });
 
+// GET order by payment reference (for polling fallback)
+router.get('/ref/:reference', authorization, async (req, res) => {
+  try {
+    const { reference } = req.params;
+    const order = await pool.query("SELECT order_id, status FROM orders WHERE payment_reference = $1", [reference]);
+    
+    if (order.rows.length > 0) {
+      return res.json(order.rows[0]);
+    }
+    // Return 200 OK with a status flag to prevent browser console 404 errors during polling
+    return res.json({ status: 'not_found' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json("Server Error");
+  }
+});
+
 // CREATE ORDER (Checkout)
 router.post('/', authorization, async (req, res) => {
   try {
     const user_id = req.user.id;
-    const { total_amount, shipping_address, points_redeemed } = req.body;
+    const { total_amount, shipping_address, points_redeemed, payment_reference } = req.body;
+    
+    console.log(`Processing Order for User ${user_id}. Ref: ${payment_reference}, Amount: ${total_amount}`);
+
+    // Verify Payment (Only if there is a payable amount)
+    const totalAmountNum = Number(total_amount);
+    
+    if (totalAmountNum > 0) {
+        if (!payment_reference) {
+            return res.status(400).json("Payment reference is required");
+        }
+
+        try {
+            const verification = await verifyPayment(payment_reference);
+            
+            if (!verification.status || verification.data.status !== 'success') {
+                console.error("Paystack Verification Failed:", verification);
+                return res.status(400).json("Payment verification failed");
+            }
+        } catch (error) {
+            console.error("Paystack Error:", error);
+            return res.status(500).json("Error verifying payment");
+        }
+    }
+
+    // Check for idempotency (If webhook already created this order)
+    const existingOrder = await pool.query("SELECT order_id FROM orders WHERE payment_reference = $1", [payment_reference]);
+    if (existingOrder.rows.length > 0) {
+        return res.json({ order_id: existingOrder.rows[0].order_id, message: "Order already processed" });
+    }
 
     // Start transaction
     await pool.query('BEGIN');
@@ -79,12 +127,12 @@ router.post('/', authorization, async (req, res) => {
     }
 
     // Calculate points to be earned from this purchase (1 point for every ₦10,000 spent)
-    const pointsEarned = Math.floor(Number(total_amount) / 10000);
+    const pointsEarned = Math.floor(totalAmountNum / 10000);
 
     // 1. Create Order
     const newOrder = await pool.query(
-      "INSERT INTO orders (user_id, total_amount, shipping_address, status, points_redeemed, points_earned) VALUES ($1, $2, $3, 'paid', $4, $5) RETURNING order_id",
-      [user_id, total_amount, JSON.stringify(shipping_address), points_redeemed || 0, pointsEarned]
+      "INSERT INTO orders (user_id, total_amount, shipping_address, status, points_redeemed, points_earned, payment_reference) VALUES ($1, $2, $3, 'paid', $4, $5, $6) RETURNING order_id",
+      [user_id, totalAmountNum, JSON.stringify(shipping_address), points_redeemed || 0, pointsEarned, payment_reference]
     );
     const orderId = newOrder.rows[0].order_id;
 
@@ -105,6 +153,12 @@ router.post('/', authorization, async (req, res) => {
         "INSERT INTO order_items (order_id, product_id, quantity, size, price_at_purchase) VALUES ($1, $2, $3, $4, $5)",
         [orderId, item.product_id, item.quantity, item.size, item.price]
       );
+
+      // Update Product Stock: Decrease quantity by the amount bought
+      await pool.query(
+        "UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - $1) WHERE product_id = $2",
+        [item.quantity, item.product_id]
+      );
     }
 
     // 4. Clear Cart
@@ -120,6 +174,18 @@ router.post('/', authorization, async (req, res) => {
 
     // Commit transaction
     await pool.query('COMMIT');
+
+    // Send Email Notification
+    try {
+        const userResult = await pool.query("SELECT email, name FROM users WHERE user_id = $1", [user_id]);
+        const { email, name } = userResult.rows[0];
+        const subject = `Order Confirmation - #${orderId}`;
+        const message = `Hello ${name},\n\nThank you for your order! Your order #${orderId} has been successfully placed.\n\nTotal Amount: ₦${totalAmountNum.toLocaleString()}\n\nYou can view your order details in your dashboard.\n\n- The 4th-street Team`;
+        
+        await sendEmail(email, subject, message);
+    } catch (emailErr) {
+        console.error("Failed to send order confirmation email:", emailErr.message);
+    }
 
     res.json({ order_id: orderId, message: "Order placed successfully" });
 

@@ -69,6 +69,26 @@ router.put('/products/:id', authorization, adminAuthorization, async (req, res) 
             "UPDATE products SET name = $1, description = $2, price = $3, sale_price = $4, stock_quantity = $5, category = $6, image_url = $7, images = $8, sizes = $9 WHERE product_id = $10 RETURNING *",
             [name, description, price, sale_price || null, stock_quantity, category, image_url, JSON.stringify(images || []), JSON.stringify(sizes || []), id]
         );
+
+        // Check for notifications if stock > 0
+        if (updatedProduct.rows.length > 0 && updatedProduct.rows[0].stock_quantity > 0) {
+            const productId = updatedProduct.rows[0].product_id;
+            const productName = updatedProduct.rows[0].name;
+            
+            const notifications = await pool.query("SELECT email FROM product_notifications WHERE product_id = $1", [productId]);
+            
+            if (notifications.rows.length > 0) {
+                const subject = `Back in Stock: ${productName}`;
+                const message = `Great news! The item "${productName}" is back in stock at 4th-street.\n\nVisit our store to purchase it now before it runs out again!`;
+                
+                notifications.rows.forEach(sub => {
+                    sendEmail(sub.email, subject, message).catch(e => console.error(`Failed to notify ${sub.email}:`, e.message));
+                });
+
+                await pool.query("DELETE FROM product_notifications WHERE product_id = $1", [productId]);
+            }
+        }
+
         res.json(updatedProduct.rows[0]);
     } catch (err) {
         console.error(err.message);
@@ -576,6 +596,23 @@ router.post('/returns/:id/restock', authorization, adminAuthorization, async (re
                         );
                     }
                 }
+            }
+
+            // Check notifications for this product
+            const productInfo = await pool.query("SELECT name FROM products WHERE product_id = $1", [item.product_id]);
+            const productName = productInfo.rows[0]?.name || "Item";
+
+            const notifications = await pool.query("SELECT email FROM product_notifications WHERE product_id = $1", [item.product_id]);
+            
+            if (notifications.rows.length > 0) {
+                const subject = `Back in Stock: ${productName}`;
+                const message = `Great news! The item "${productName}" is back in stock at 4th-street.\n\nVisit our store to purchase it now before it runs out again!`;
+                
+                notifications.rows.forEach(sub => {
+                    sendEmail(sub.email, subject, message).catch(e => console.error(`Failed to notify ${sub.email}:`, e.message));
+                });
+
+                await pool.query("DELETE FROM product_notifications WHERE product_id = $1", [item.product_id]);
             }
         }
 

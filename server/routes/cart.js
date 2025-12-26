@@ -29,6 +29,11 @@ router.post('/', authorization, async (req, res) => {
     const { product_id, quantity, size } = req.body;
     const user_id = req.user.id;
 
+    // Check stock availability
+    const productRes = await pool.query("SELECT stock_quantity FROM products WHERE product_id = $1", [product_id]);
+    if (productRes.rows.length === 0) return res.status(404).json("Product not found");
+    const stock = productRes.rows[0].stock_quantity;
+
     // Check if item already exists in cart
     const existingItem = await pool.query(
       "SELECT * FROM cart_items WHERE user_id = $1 AND product_id = $2 AND size IS NOT DISTINCT FROM $3",
@@ -38,11 +43,20 @@ router.post('/', authorization, async (req, res) => {
     if (existingItem.rows.length > 0) {
       // Update quantity
       const newQuantity = existingItem.rows[0].quantity + parseInt(quantity);
+
+      if (newQuantity > stock) {
+        return res.status(400).json(`Cannot add to cart. Only ${stock} items left in stock.`);
+      }
+
       await pool.query(
         "UPDATE cart_items SET quantity = $1 WHERE cart_item_id = $2",
         [newQuantity, existingItem.rows[0].cart_item_id]
       );
       return res.json("Cart updated");
+    }
+
+    if (parseInt(quantity) > stock) {
+        return res.status(400).json(`Cannot add to cart. Only ${stock} items left in stock.`);
     }
 
     // Insert new item
@@ -66,6 +80,17 @@ router.put('/:id', authorization, async (req, res) => {
 
     if (quantity < 1) {
         return res.status(400).json("Quantity must be at least 1");
+    }
+
+    // Check stock
+    const cartItem = await pool.query("SELECT product_id FROM cart_items WHERE cart_item_id = $1", [id]);
+    if (cartItem.rows.length === 0) return res.status(404).json("Item not found");
+    
+    const productRes = await pool.query("SELECT stock_quantity FROM products WHERE product_id = $1", [cartItem.rows[0].product_id]);
+    const stock = productRes.rows[0].stock_quantity;
+
+    if (quantity > stock) {
+        return res.status(400).json(`Cannot update quantity. Only ${stock} items left in stock.`);
     }
 
     await pool.query(

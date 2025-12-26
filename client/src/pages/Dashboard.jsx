@@ -16,21 +16,14 @@ import {
   Plus,
   Trash2,
   ShieldCheck,
+  RefreshCw,
   Info,
   X
 } from 'lucide-react';
 import { formatNaira } from '../utils/formatCurrency';
+import { JUMIA_STATIONS } from '../data/jumiaStations';
 
-const JUMIA_STATIONS = [
-    "Ikeja - 123 Allen Avenue",
-    "Lekki - 45 Admiralty Way",
-    "Yaba - 20 Commercial Road",
-    "Surulere - 15 Ojuelegba Road",
-    "Victoria Island - 10 Ozumba Mbadiwe",
-    "Abuja Central - 5 Garki Area",
-    "Port Harcourt - 8 Aba Road",
-    "Ibadan - 30 Trans Amadi"
-];
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Dashboard = ({ setAuth }) => {
   const [user, setUser] = useState(null);
@@ -69,7 +62,7 @@ const Dashboard = ({ setAuth }) => {
 
   const fetchWishlist = async () => {
     try {
-      const response = await fetch("http://localhost:5000/wishlist", {
+      const response = await fetch(`${API_URL}/wishlist`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -81,7 +74,7 @@ const Dashboard = ({ setAuth }) => {
 
   const removeFromWishlist = async (productId) => {
     try {
-      await fetch(`http://localhost:5000/wishlist/${productId}`, {
+      await fetch(`${API_URL}/wishlist/${productId}`, {
         method: "DELETE",
         headers: { token: localStorage.token }
       });
@@ -93,7 +86,7 @@ const Dashboard = ({ setAuth }) => {
 
   const fetchAddresses = async () => {
     try {
-      const response = await fetch("http://localhost:5000/addresses", {
+      const response = await fetch(`${API_URL}/addresses`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -108,26 +101,26 @@ const Dashboard = ({ setAuth }) => {
       try {
         const headers = { token: localStorage.token };
         
-        const userRes = await fetch("http://localhost:5000/user", { headers });
+        const userRes = await fetch(`${API_URL}/user`, { headers });
         const userData = await userRes.json();
         setUser(userData);
 
-        const ordersRes = await fetch("http://localhost:5000/orders", { headers });
+        const ordersRes = await fetch(`${API_URL}/orders`, { headers });
         const ordersData = await ordersRes.json();
         if (Array.isArray(ordersData)) setOrders(ordersData);
         
         // Initial wishlist fetch
-        const wishlistRes = await fetch("http://localhost:5000/wishlist", { headers });
+        const wishlistRes = await fetch(`${API_URL}/wishlist`, { headers });
         const wishlistData = await wishlistRes.json();
         if (Array.isArray(wishlistData)) setWishlist(wishlistData);
 
         // Initial addresses fetch
-        const addressesRes = await fetch("http://localhost:5000/addresses", { headers });
+        const addressesRes = await fetch(`${API_URL}/addresses`, { headers });
         const addressesData = await addressesRes.json();
         if (Array.isArray(addressesData)) setAddresses(addressesData);
 
         // Fetch Points History
-        const pointsRes = await fetch("http://localhost:5000/user/points-history", { headers });
+        const pointsRes = await fetch(`${API_URL}/user/points-history`, { headers });
         const pointsData = await pointsRes.json();
         if (Array.isArray(pointsData)) setPointsHistory(pointsData);
 
@@ -144,7 +137,7 @@ const Dashboard = ({ setAuth }) => {
   const updateProfile = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/user", {
+      const response = await fetch(`${API_URL}/user`, {
         method: "PUT",
         headers: { 
             "Content-Type": "application/json",
@@ -164,7 +157,7 @@ const Dashboard = ({ setAuth }) => {
   const updatePassword = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/user", {
+      const response = await fetch(`${API_URL}/user`, {
         method: "PUT",
         headers: { 
             "Content-Type": "application/json",
@@ -192,13 +185,19 @@ const Dashboard = ({ setAuth }) => {
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!JUMIA_STATIONS.includes(addressForm.postal_code)) {
+        alert("Please select a valid pickup station from the list.");
+        return;
+    }
+
     try {
       if (!localStorage.token) {
         alert("You are not logged in.");
         return;
       }
 
-      const response = await fetch("http://localhost:5000/addresses", {
+      const response = await fetch(`${API_URL}/addresses`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
@@ -225,7 +224,7 @@ const Dashboard = ({ setAuth }) => {
   const deleteAddress = async (id) => {
     if(!window.confirm("Are you sure you want to delete this address?")) return;
     try {
-        await fetch(`http://localhost:5000/addresses/${id}`, {
+        await fetch(`${API_URL}/addresses/${id}`, {
             method: "DELETE",
             headers: { token: localStorage.token }
         });
@@ -393,10 +392,16 @@ const OrderProgressBar = ({ status }) => {
                 
                 {/* Admin Link - Only visible if user is admin */}
                 {user?.is_admin && (
-                  <Link to="/admin/roles" className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors w-full text-left group">
-                    <ShieldCheck size={20} className="group-hover:text-[#194cb3] transition-colors" />
-                    <span className="font-medium">Admin Panel</span>
-                  </Link>
+                  <>
+                    <Link to="/admin/roles" className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors w-full text-left group">
+                      <ShieldCheck size={20} className="group-hover:text-[#194cb3] transition-colors" />
+                      <span className="font-medium">Admin Roles</span>
+                    </Link>
+                    <Link to="/admin/returns" className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors w-full text-left group">
+                      <RefreshCw size={20} className="group-hover:text-[#194cb3] transition-colors" />
+                      <span className="font-medium">Manage Returns</span>
+                    </Link>
+                  </>
                 )}
 
                 <button 
@@ -703,12 +708,20 @@ const OrderProgressBar = ({ status }) => {
                                 <input required type="text" placeholder="Address Line 1" value={addressForm.address_line1} onChange={(e) => setAddressForm({...addressForm, address_line1: e.target.value})} className="p-2 border border-gray-300 rounded text-sm" />
                                 <input required type="text" placeholder="City" value={addressForm.city} onChange={(e) => setAddressForm({...addressForm, city: e.target.value})} className="p-2 border border-gray-300 rounded text-sm" />
                                 <input type="text" placeholder="State/Province" value={addressForm.state} onChange={(e) => setAddressForm({...addressForm, state: e.target.value})} className="p-2 border border-gray-300 rounded text-sm" />
-                                <select required value={addressForm.postal_code} onChange={(e) => setAddressForm({...addressForm, postal_code: e.target.value})} className="p-2 border border-gray-300 rounded text-sm">
-                                    <option value="">Select Pickup Station</option>
+                                <input 
+                                    list="jumia-stations-dashboard"
+                                    required 
+                                    type="text" 
+                                    placeholder="Select or Search Pickup Station" 
+                                    value={addressForm.postal_code} 
+                                    onChange={(e) => setAddressForm({...addressForm, postal_code: e.target.value})} 
+                                    className="p-2 border border-gray-300 rounded text-sm" 
+                                />
+                                <datalist id="jumia-stations-dashboard">
                                     {JUMIA_STATIONS.map(s => (
-                                        <option key={s} value={s}>{s}</option>
+                                        <option key={s} value={s} />
                                     ))}
-                                </select>
+                                </datalist>
                                 <input required type="text" placeholder="Country" value={addressForm.country} onChange={(e) => setAddressForm({...addressForm, country: e.target.value})} className="p-2 border border-gray-300 rounded text-sm" />
                             </div>
                             <div className="flex items-center mb-4">
@@ -747,7 +760,7 @@ const OrderProgressBar = ({ status }) => {
                                             <button 
                                                 onClick={async () => {
                                                     try {
-                                                        await fetch(`http://localhost:5000/addresses/${addr.address_id}/default`, {
+                                                        await fetch(`${API_URL}/addresses/${addr.address_id}/default`, {
                                                             method: "PUT",
                                                             headers: { token: localStorage.token }
                                                         });
