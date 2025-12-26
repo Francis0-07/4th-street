@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShoppingBag } from 'lucide-react';
+import { Eye, EyeOff, ShoppingBag, Loader2 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -15,6 +15,7 @@ const Register = ({ setAuth }) => {
     phone: ""
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { email, password, confirmPassword, name, phone } = inputs;
 
@@ -28,6 +29,7 @@ const Register = ({ setAuth }) => {
         alert("Passwords do not match");
         return;
     }
+    setIsLoading(true);
 
     try {
       const body = { email, password, name, phone };
@@ -67,10 +69,12 @@ const Register = ({ setAuth }) => {
         navigate("/login");
       } else {
         setAuth(false);
+        setIsLoading(false);
         alert(parseRes); // Simple error handling
       }
     } catch (err) {
       console.error(err.message);
+      setIsLoading(false);
       alert("Registration failed. Please check your connection.");
     }
   };
@@ -271,8 +275,15 @@ const Register = ({ setAuth }) => {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-4 pt-2">
-                      <button type="submit" className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#194cb3] hover:bg-blue-800 transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-sm">
-                        <span className="truncate">Create Account</span>
+                      <button disabled={isLoading} type="submit" className={`flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#194cb3] hover:bg-blue-800 transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-sm ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="animate-spin" size={20} />
+                            Creating Account...
+                          </span>
+                        ) : (
+                          <span className="truncate">Create Account</span>
+                        )}
                       </button>
                       
                       <div className="relative flex py-2 items-center">
