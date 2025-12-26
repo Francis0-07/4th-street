@@ -4,6 +4,8 @@ import { ArrowLeft, ShoppingBag, Heart, ChevronRight, Star, CheckCircle, ArrowRi
 import RelatedProducts from '../components/RelatedProducts';
 import { formatNaira } from '../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const SizeSelector = ({ sizes, selectedSize, onSelect }) => {
     if (!sizes || sizes.length === 0) return null;
 
@@ -68,7 +70,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/products/${id}`);
+        const response = await fetch(`${API_URL}/products/${id}`);
         const data = await response.json();
         setProduct(data);
         setActiveImage(data.image_url);
@@ -85,7 +87,7 @@ const ProductDetail = () => {
     const checkWishlist = async () => {
       if (!localStorage.token) return;
       try {
-        const response = await fetch("http://localhost:5000/wishlist", {
+        const response = await fetch(`${API_URL}/wishlist`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();
@@ -131,7 +133,7 @@ const ProductDetail = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/cart", {
+      const response = await fetch(`${API_URL}/cart`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
@@ -154,13 +156,13 @@ const ProductDetail = () => {
     }
     try {
       if (isInWishlist) {
-        await fetch(`http://localhost:5000/wishlist/${product.product_id}`, {
+        await fetch(`${API_URL}/wishlist/${product.product_id}`, {
           method: "DELETE",
           headers: { token: localStorage.token }
         });
         setIsInWishlist(false);
       } else {
-        const response = await fetch("http://localhost:5000/wishlist", {
+        const response = await fetch(`${API_URL}/wishlist`, {
           method: "POST",
           headers: { 
               "Content-Type": "application/json",

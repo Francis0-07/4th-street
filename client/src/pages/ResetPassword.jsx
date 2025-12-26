@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,7 +24,7 @@ const ResetPassword = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/auth/reset-password/${token}`, {
+      const response = await fetch(`${API_URL}/auth/reset-password/${token}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })

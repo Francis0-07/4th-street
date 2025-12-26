@@ -293,7 +293,7 @@ const Checkout = () => {
       interval = setInterval(async () => {
         if (orderProcessed.current) return;
         try {
-          const response = await fetch(`http://localhost:5000/orders/ref/${paystackReference}`, {
+          const response = await fetch(`${API_URL}/orders/ref/${paystackReference}`, {
             headers: { token: localStorage.token }
           });
           if (response.ok) {

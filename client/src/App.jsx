@@ -37,6 +37,8 @@ import Privacy from './pages/Privacy';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 function AppContent() {
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -65,7 +67,7 @@ function AppContent() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/auth/is-verify", {
+      const response = await fetch(`${API_URL}/auth/is-verify`, {
         method: "GET",
         headers: { token: localStorage.token }
       });
@@ -95,7 +97,7 @@ function AppContent() {
   const updateCartCount = async () => {
     if (localStorage.token) {
         try {
-            const response = await fetch("http://localhost:5000/cart", {
+            const response = await fetch(`${API_URL}/cart`, {
                 headers: { token: localStorage.token }
             });
             if (response.ok) {

@@ -4,6 +4,8 @@ import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import RelatedProducts from '../components/RelatedProducts';
 import { formatNaira } from '../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const Cart = () => {
         setLoading(false);
         return;
       }
-      const response = await fetch("http://localhost:5000/cart", {
+      const response = await fetch(`${API_URL}/cart`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -55,7 +57,7 @@ const Cart = () => {
     }
 
     try {
-      await fetch(`http://localhost:5000/cart/${id}`, {
+      await fetch(`${API_URL}/cart/${id}`, {
         method: "PUT",
         headers: { 
             "Content-Type": "application/json",
@@ -82,7 +84,7 @@ const Cart = () => {
     }
 
     try {
-      await fetch(`http://localhost:5000/cart/${id}`, {
+      await fetch(`${API_URL}/cart/${id}`, {
         method: "DELETE",
         headers: { token: localStorage.token }
       });

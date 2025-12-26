@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Package, MapPin, CreditCard } from 'lucide-react';
 import { formatNaira } from '../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const OrderDetails = () => {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
@@ -11,7 +13,7 @@ const OrderDetails = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/orders/${id}`, {
+        const response = await fetch(`${API_URL}/orders/${id}`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ReturnItem = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -15,7 +17,7 @@ const ReturnItem = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        const response = await fetch(`http://localhost:5000/orders/${formData.orderId}/return`, {
+        const response = await fetch(`${API_URL}/orders/${formData.orderId}/return`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
