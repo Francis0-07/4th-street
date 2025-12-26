@@ -14,6 +14,12 @@ import settingsRouter from './routes/settings.js';
 import contactRouter from './routes/contact.js';
 import webhookRouter from './routes/webhook.js';
 import notificationsRouter from './routes/notifications.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -43,6 +49,50 @@ app.use('/notifications', notificationsRouter);
 // Test Route
 app.get('/', (req, res) => {
   res.send('4th-street API is running');
+});
+
+// Safe Environment Check (Returns true/false, not the actual secrets)
+app.get('/env-check', (req, res) => {
+  res.json({
+    status: 'active',
+    has_database_url: !!process.env.DATABASE_URL,
+    has_jwt_secret: !!process.env.JWT_SECRET,
+    has_paystack_key: !!process.env.PAYSTACK_SECRET_KEY,
+    has_email_user: !!process.env.EMAIL_USER
+  });
+});
+
+// Database Setup Route (Run this once to create tables)
+app.get('/setup-db', async (req, res) => {
+  try {
+    const sqlPath = path.join(__dirname, 'database.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    await pool.query(sql);
+    res.send("Database setup completed successfully! Tables created. You can now register and add products.");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error setting up database: " + err.message);
+  }
+});
+
+// Make User Admin Route
+app.get('/make-admin', async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).send("Please provide an email parameter. Example: /make-admin?email=user@example.com");
+
+  try {
+    const result = await pool.query(
+      "UPDATE users SET is_admin = TRUE, is_super_admin = TRUE WHERE email = $1 RETURNING *",
+      [email]
+    );
+    if (result.rows.length > 0) {
+      res.send(`Success! User ${email} is now a Super Admin. Please log out and log back in to see admin features.`);
+    } else {
+      res.status(404).send(`User with email '${email}' not found. Please ensure you have registered with this email first.`);
+    }
+  } catch (err) {
+    res.status(500).send("Error: " + err.message);
+  }
 });
 
 // Database Connection Test
