@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { formatNaira } from '../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Shop = () => {
   const location = useLocation();
   const [products, setProducts] = useState([]);
@@ -26,7 +28,7 @@ const Shop = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        let url = `http://localhost:5000/products?sort=${sort}`;
+        let url = `${API_URL}/products?sort=${sort}`;
         if (category) {
           url += `&category=${category}`;
         }

@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ShoppingBag } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Register = ({ setAuth }) => {
   const navigate = useNavigate();
   const [inputs, setInputs] = useState({
@@ -29,7 +31,7 @@ const Register = ({ setAuth }) => {
 
     try {
       const body = { email, password, name, phone };
-      const response = await fetch("http://localhost:5000/auth/register", {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -43,7 +45,7 @@ const Register = ({ setAuth }) => {
         if (guestCart.length > 0) {
             try {
                 await Promise.all(guestCart.map(item => 
-                    fetch("http://localhost:5000/cart", {
+                    fetch(`${API_URL}/cart`, {
                         method: "POST",
                         headers: { 
                             "Content-Type": "application/json",
@@ -76,7 +78,7 @@ const Register = ({ setAuth }) => {
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const response = await fetch("http://localhost:5000/auth/google-login", {
+        const response = await fetch(`${API_URL}/auth/google-login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ access_token: tokenResponse.access_token })
@@ -92,7 +94,7 @@ const Register = ({ setAuth }) => {
             if (guestCart.length > 0) {
                 try {
                     await Promise.all(guestCart.map(item => 
-                        fetch("http://localhost:5000/cart", {
+                        fetch(`${API_URL}/cart`, {
                             method: "POST",
                             headers: { 
                                 "Content-Type": "application/json",

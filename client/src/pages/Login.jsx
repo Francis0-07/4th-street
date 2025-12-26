@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
-import { Mail, Lock, Eye, EyeOff, ShoppingBag, Menu } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ShoppingBag, Menu, Loader2 } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Login = ({ setAuth }) => {
   const [inputs, setInputs] = useState({
@@ -9,6 +11,7 @@ const Login = ({ setAuth }) => {
     password: ""
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { email, password } = inputs;
 
@@ -18,9 +21,10 @@ const Login = ({ setAuth }) => {
 
   const onSubmitForm = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const body = { email, password };
-      const response = await fetch("http://localhost:5000/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
@@ -36,7 +40,7 @@ const Login = ({ setAuth }) => {
         if (guestCart.length > 0) {
             try {
                 await Promise.all(guestCart.map(item => 
-                    fetch("http://localhost:5000/cart", {
+                    fetch(`${API_URL}/cart`, {
                         method: "POST",
                         headers: { 
                             "Content-Type": "application/json",
@@ -57,10 +61,12 @@ const Login = ({ setAuth }) => {
         window.dispatchEvent(new Event("cartUpdated"));
       } else {
         setAuth(false);
+        setIsLoading(false);
         alert(parseRes);
       }
     } catch (err) {
       console.error(err.message);
+      setIsLoading(false);
       alert("Login failed. Please check your connection.");
     }
   };
@@ -68,7 +74,7 @@ const Login = ({ setAuth }) => {
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        const response = await fetch("http://localhost:5000/auth/google-login", {
+        const response = await fetch(`${API_URL}/auth/google-login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ access_token: tokenResponse.access_token })
@@ -84,7 +90,7 @@ const Login = ({ setAuth }) => {
             if (guestCart.length > 0) {
                 try {
                     await Promise.all(guestCart.map(item => 
-                        fetch("http://localhost:5000/cart", {
+                        fetch(`${API_URL}/cart`, {
                             method: "POST",
                             headers: { 
                                 "Content-Type": "application/json",
@@ -208,8 +214,15 @@ const Login = ({ setAuth }) => {
                 </div>
                 {/* Login Button */}
                 <div>
-                  <button className="flex w-full justify-center rounded-lg bg-[#194cb3] px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-[#143d91] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#194cb3] transition-all duration-200 uppercase tracking-wide" type="submit">
-                    Secure Login
+                  <button disabled={isLoading} className={`flex w-full justify-center rounded-lg bg-[#194cb3] px-3 py-3 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-[#143d91] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#194cb3] transition-all duration-200 uppercase tracking-wide ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`} type="submit">
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="animate-spin" size={20} />
+                        Logging in...
+                      </span>
+                    ) : (
+                      "Secure Login"
+                    )}
                   </button>
                 </div>
               </form>

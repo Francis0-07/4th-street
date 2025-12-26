@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatNaira } from '../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Home = () => {
   const [products, setProducts] = useState([]);
 
@@ -9,7 +11,7 @@ const Home = () => {
     const fetchProducts = async () => {
       try {
         // Fetch products sorted by newest
-        const response = await fetch('http://localhost:5000/products?sort=newest');
+        const response = await fetch(`${API_URL}/products?sort=newest`);
         const data = await response.json();
         // Take only the first 4 items for the homepage
         setProducts(data.slice(0, 4));
