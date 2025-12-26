@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, UserPlus, TrendingUp, DollarSign, Search, Filter, Edit, Lock, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const CustomerManagement = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ const CustomerManagement = () => {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await fetch('http://localhost:5000/admin/customers', {
+        const response = await fetch(`${API_URL}/admin/customers`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();

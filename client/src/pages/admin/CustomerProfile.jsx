@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, ArrowLeft, User, Mail, Phone, Shield } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const CustomerProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,12 +25,12 @@ const CustomerProfile = () => {
         const headers = { token: localStorage.token };
 
         // Fetch Current User to check permissions
-        const userRes = await fetch("http://localhost:5000/user", { headers });
+        const userRes = await fetch(`${API_URL}/user`, { headers });
         const userData = await userRes.json();
         if (userRes.ok) setCurrentUser(userData);
         
         // 1. Fetch Customer Details
-        const customerRes = await fetch(`http://localhost:5000/admin/customers/${id}`, { headers });
+        const customerRes = await fetch(`${API_URL}/admin/customers/${id}`, { headers });
         const customerData = await customerRes.json();
         
         if (customerRes.ok) {
@@ -43,7 +45,7 @@ const CustomerProfile = () => {
         }
 
         // 2. Fetch Available Roles
-        const rolesRes = await fetch("http://localhost:5000/roles", { headers });
+        const rolesRes = await fetch(`${API_URL}/roles`, { headers });
         const rolesData = await rolesRes.json();
         if (rolesRes.ok) {
             setRoles(rolesData);
@@ -80,7 +82,7 @@ const CustomerProfile = () => {
             }
         }
 
-        const response = await fetch(`http://localhost:5000/admin/customers/${id}`, {
+        const response = await fetch(`${API_URL}/admin/customers/${id}`, {
             method: "PUT",
             headers: { 
                 "Content-Type": "application/json",

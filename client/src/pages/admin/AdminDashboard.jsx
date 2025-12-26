@@ -4,6 +4,8 @@ import { Package, ShoppingBag, Users, Banknote, Search, Bell, HelpCircle, Calend
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatNaira } from '../../utils/formatCurrency';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     users: 0,
@@ -42,7 +44,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("http://localhost:5000/admin/stats", {
+        const response = await fetch(`${API_URL}/admin/stats`, {
           headers: { token: localStorage.token }
         });
         
@@ -61,7 +63,7 @@ const AdminDashboard = () => {
         setStats(data);
 
         // Fetch Recent Orders
-        const ordersResponse = await fetch("http://localhost:5000/admin/orders", {
+        const ordersResponse = await fetch(`${API_URL}/admin/orders`, {
             headers: { token: localStorage.token }
         });
         if (ordersResponse.ok) {
@@ -71,7 +73,7 @@ const AdminDashboard = () => {
 
         // Fetch Analytics for Chart
         const { startDate, endDate } = getDateRangeParams(dateRange);
-        const analyticsResponse = await fetch(`http://localhost:5000/admin/analytics?startDate=${startDate}&endDate=${endDate}`, {
+        const analyticsResponse = await fetch(`${API_URL}/admin/analytics?startDate=${startDate}&endDate=${endDate}`, {
           headers: { token: localStorage.token }
         });
         if (analyticsResponse.ok) {

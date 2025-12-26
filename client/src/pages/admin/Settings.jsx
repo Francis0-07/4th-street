@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Save, Store, CreditCard, Truck, Receipt, Bell, Search, LogOut, ChevronRight, Mail, Phone, Globe, MapPin, DollarSign, Clock, Hash, Share2 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Settings = () => {
   const [formData, setFormData] = useState({
     store_name: '',
@@ -18,7 +20,7 @@ const Settings = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch('http://localhost:5000/admin/settings', {
+        const response = await fetch(`${API_URL}/admin/settings`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();
@@ -40,7 +42,7 @@ const Settings = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/admin/settings', {
+      const response = await fetch(`${API_URL}/admin/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

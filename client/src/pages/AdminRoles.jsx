@@ -15,6 +15,8 @@ import {
   Tag
 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const AdminRoles = () => {
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState([]);
@@ -49,7 +51,7 @@ const AdminRoles = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("http://localhost:5000/roles", {
+      const response = await fetch(`${API_URL}/roles`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -69,7 +71,7 @@ const AdminRoles = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/admin/customers", {
+      const response = await fetch(`${API_URL}/admin/customers`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -81,7 +83,7 @@ const AdminRoles = () => {
 
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch("http://localhost:5000/user", {
+      const response = await fetch(`${API_URL}/user`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -128,8 +130,8 @@ const AdminRoles = () => {
 
       const body = { ...formData, name: roleName, permissions };
       const url = selectedRole 
-        ? `http://localhost:5000/roles/${selectedRole.role_id}`
-        : "http://localhost:5000/roles";
+        ? `${API_URL}/roles/${selectedRole.role_id}`
+        : `${API_URL}/roles`;
       
       const method = selectedRole ? "PUT" : "POST";
 
@@ -145,7 +147,7 @@ const AdminRoles = () => {
         // If creating a new role, assign the pending users now
         if (!selectedRole && pendingUsers.size > 0) {
             await Promise.all([...pendingUsers].map(userId => 
-                fetch(`http://localhost:5000/admin/customers/${userId}/role`, {
+                fetch(`${API_URL}/admin/customers/${userId}/role`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', token: localStorage.token },
                     body: JSON.stringify({ role_id: savedRole.role_id })
@@ -172,7 +174,7 @@ const AdminRoles = () => {
     if (!window.confirm(`Delete role "${selectedRole.name}"?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/roles/${selectedRole.role_id}`, {
+      const response = await fetch(`${API_URL}/roles/${selectedRole.role_id}`, {
         method: "DELETE",
         headers: { token: localStorage.token }
       });
@@ -206,7 +208,7 @@ const AdminRoles = () => {
 
     const newRoleId = Number(user.role_id) === Number(selectedRole.role_id) ? null : selectedRole.role_id;
     try {
-        const response = await fetch(`http://localhost:5000/admin/customers/${user.user_id}/role`, {
+        const response = await fetch(`${API_URL}/admin/customers/${user.user_id}/role`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', token: localStorage.token },
             body: JSON.stringify({ role_id: newRoleId })
@@ -222,7 +224,7 @@ const AdminRoles = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-        const response = await fetch("http://localhost:5000/admin/customers", {
+        const response = await fetch(`${API_URL}/admin/customers`, {
             method: "POST",
             headers: { "Content-Type": "application/json", token: localStorage.token },
             body: JSON.stringify({ ...newUserData, role_id: selectedRole ? selectedRole.role_id : null })

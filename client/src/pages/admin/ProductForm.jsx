@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Upload, Save, Image as ImageIcon, Link as LinkIcon, List, Type, Bold, Italic, Underline } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ const ProductForm = () => {
     if (isEditing) {
       const fetchProduct = async () => {
         try {
-          const response = await fetch(`http://localhost:5000/products/${id}`);
+          const response = await fetch(`${API_URL}/products/${id}`);
           const data = await response.json();
           setFormData({
             ...data,
@@ -110,7 +112,7 @@ const ProductForm = () => {
         finalData.image_url = finalData.images[0];
     }
 
-    const url = isEditing ? `http://localhost:5000/admin/products/${id}` : 'http://localhost:5000/admin/products';
+    const url = isEditing ? `${API_URL}/admin/products/${id}` : `${API_URL}/admin/products`;
     const method = isEditing ? 'PUT' : 'POST';
 
     try {

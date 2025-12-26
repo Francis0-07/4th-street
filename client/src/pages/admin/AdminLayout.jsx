@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, ShoppingBag, Users, LogOut, Tag, BarChart, Settings, ShieldCheck, RotateCcw } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const AdminLayout = ({ setAuth }) => {
   const location = useLocation();
   const [user, setUser] = useState(null);
@@ -9,7 +11,7 @@ const AdminLayout = ({ setAuth }) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("http://localhost:5000/user", {
+        const response = await fetch(`${API_URL}/user`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();

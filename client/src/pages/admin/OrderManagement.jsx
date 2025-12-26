@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Search } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,7 +13,7 @@ const OrderManagement = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('http://localhost:5000/admin/orders', {
+        const response = await fetch(`${API_URL}/admin/orders`, {
           headers: { token: localStorage.token }
         });
         const data = await response.json();
@@ -30,7 +32,7 @@ const OrderManagement = () => {
     if (!window.confirm(`Are you sure you want to update order #${id} to ${newStatus}?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/admin/orders/${id}/status`, {
+      const response = await fetch(`${API_URL}/admin/orders/${id}/status`, {
         method: 'PUT',
         headers: { 
             'Content-Type': 'application/json',

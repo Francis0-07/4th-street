@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Tag, Plus, Trash2, Power } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const PromotionsManagement = () => {
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPromotions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/admin/promotions', {
+      const response = await fetch(`${API_URL}/admin/promotions`, {
         headers: { token: localStorage.token }
       });
       const data = await response.json();
@@ -27,7 +29,7 @@ const PromotionsManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this promotion?")) {
       try {
-        await fetch(`http://localhost:5000/admin/promotions/${id}`, {
+        await fetch(`${API_URL}/admin/promotions/${id}`, {
           method: "DELETE",
           headers: { token: localStorage.token }
         });
@@ -40,7 +42,7 @@ const PromotionsManagement = () => {
 
   const handleToggleActive = async (promo) => {
     try {
-      await fetch(`http://localhost:5000/admin/promotions/${promo.promotion_id}`, {
+      await fetch(`${API_URL}/admin/promotions/${promo.promotion_id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", token: localStorage.token },
         body: JSON.stringify({ ...promo, is_active: !promo.is_active })

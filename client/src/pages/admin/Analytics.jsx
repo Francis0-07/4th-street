@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Award } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Analytics = () => {
   const [data, setData] = useState({ sales: [], topProducts: [] });
   const [loading, setLoading] = useState(true);
@@ -8,7 +10,7 @@ const Analytics = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/admin/analytics', {
+        const response = await fetch(`${API_URL}/admin/analytics`, {
           headers: { token: localStorage.token }
         });
         const result = await response.json();
