@@ -95,6 +95,30 @@ app.get('/make-admin', async (req, res) => {
   }
 });
 
+// Fix Database Schema Route (Run this to add missing columns)
+app.get('/fix-db-schema', async (req, res) => {
+  try {
+    await pool.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_price NUMERIC(10, 2);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]';
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes JSONB DEFAULT '[]';
+      
+      CREATE TABLE IF NOT EXISTS product_notifications (
+        notification_id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        product_id INTEGER REFERENCES products(product_id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(email, product_id)
+      );
+    `);
+    res.send("Database schema fixed! Missing columns (sale_price, stock_quantity, etc.) have been added.");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error fixing schema: " + err.message);
+  }
+});
+
 // Database Connection Test
 app.get('/test-db', async (req, res) => {
   try {
