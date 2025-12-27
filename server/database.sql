@@ -46,6 +46,7 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
+    sale_price DECIMAL(10, 2),
     stock_quantity INTEGER DEFAULT 0,
     category VARCHAR(100),
     image_url TEXT, -- URL to the image
