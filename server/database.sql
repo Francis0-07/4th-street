@@ -2,6 +2,8 @@
 -- CREATE DATABASE fourth_street_db;
 
 -- Drop tables if they exist to prevent "relation already exists" errors on re-run
+DROP TABLE IF EXISTS product_notifications CASCADE;
+DROP TABLE IF EXISTS returns CASCADE;
 DROP TABLE IF EXISTS reviews CASCADE;
 DROP TABLE IF EXISTS order_items CASCADE;
 DROP TABLE IF EXISTS promotions CASCADE;
